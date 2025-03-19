@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sunu_projet/models/my_user.dart';
@@ -63,5 +64,30 @@ class AuthenticationService with ChangeNotifier {
  // Déconnexion
  Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  // Synchroniser un utilisateur dans Firestore lors de la connexion ou création
+  Future<void> syncUserToFirestore(User user) async {
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
+    if (!docSnapshot.exists) {
+      await userDoc.set({
+        'email': user.email,
+        'displayName': user.displayName ?? "Utilisateur Anonyme",
+        'role': 'membre', // Rôle par défaut
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('users').get();
+      return snapshot.docs.map((doc) {
+        return doc.data()..['uid'] = doc.id;
+      }).toList();
+    } catch (e) {
+      return [];
+    }
   }
 }

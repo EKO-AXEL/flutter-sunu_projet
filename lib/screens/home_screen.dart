@@ -67,7 +67,7 @@ class _HomeState extends State<Home>{
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bienvenue ${widget.currentUser.nom ?? ''}',
+                          'Bienvenue ${widget.currentUser.firstname ?? ''}',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 20,

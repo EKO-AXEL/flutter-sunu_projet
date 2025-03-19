@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sunu_projet/models/my_user.dart';
+import 'package:sunu_projet/providers/user_service.dart';
 import '../../config/constants_colors.dart';
 import '../../config/inputs_fields.dart';
 import '../../providers/authentification_service.dart';
@@ -14,9 +16,14 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _lastnameController = TextEditingController();
+  final _firstnameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _password2Controller = TextEditingController();
+
   final AuthenticationService authService = AuthenticationService();
+  final UserService userService = UserService();
 
   String? errorMessage = '';
   bool isLoading = false;
@@ -26,27 +33,49 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if(_formKey.currentState!.validate()){
       setState(() => isLoading = true);
       try{
-        await authService.createUserWithEmailAndPassword(email: _emailController.text, password: _passwordController.text);
+        if(_passwordController.text == _password2Controller.text) {
+          await authService.createUserWithEmailAndPassword(email: _emailController.text, password: _passwordController.text);
+          String? uid = authService.uid;
+          MyUserModel user = MyUserModel(_lastnameController as String?, _firstnameController as String?, _emailController as String?);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LoginScreen(),
-          ),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                "Inscription reussi !",
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
+          if(uid != null) {
+            userService.addUser(user, uid);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoginScreen(),
               ),
-              duration: Duration(seconds: 5),
-              backgroundColor: kGreenColor,
-            )
-        );
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    "Inscription reussi !",
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  duration: Duration(seconds: 5),
+                  backgroundColor: kGreenColor,
+                )
+            );
+          }
+        }else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  "Le mot de passe ne correspond pas",
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                duration: Duration(seconds: 5),
+                backgroundColor: kGreenColor,
+              )
+          );
+          isLoading = false;
+        }
       }on FirebaseAuthException catch(ex) {
         setState(() {
           isLoading = false;
@@ -118,6 +147,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             children: [
                               SizedBox(height: 20.0,),
                               CustomInput(
+                                controller: _lastnameController,
+                                labelText: "Nom",
+                                hintLabel: "Entrez votre nom",
+                                prefixIcon: Icons.person_outlined,
+                                isRequired: true,
+                              ),
+                              const SizedBox(height: 20.0,),
+                              CustomInput(
+                                controller: _firstnameController,
+                                labelText: "Prenom",
+                                hintLabel: "Entrez votre prenom",
+                                prefixIcon: Icons.person_2_outlined,
+                                isRequired: true,
+                              ),
+                              const SizedBox(height: 20.0,),
+                              CustomInput(
                                 controller: _emailController,
                                 labelText: "Email",
                                 hintLabel: "Entrez votre email",
@@ -135,14 +180,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               const SizedBox(height: 20.0,),
                               CustomInput(
-                                controller: _passwordController,
-                                labelText: "Confirmer votre password",
-                                hintLabel: "Confirmer le mot de passe",
+                                controller: _password2Controller,
+                                labelText: "Password",
+                                hintLabel: "Entrez votre mot de passe",
                                 prefixIcon: Icons.lock_open_outlined,
                                 isRequired: true,
                                 isPassword: true,
                               ),
-                              const SizedBox(height: 24.0,),
+                              const SizedBox(height: 20.0,),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [

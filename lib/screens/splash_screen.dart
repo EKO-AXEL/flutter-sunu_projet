@@ -41,7 +41,7 @@ class _SplashScreen extends State<SplashScreen> with SingleTickerProviderStateMi
       if(status == AnimationStatus.completed){
         Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => ProjectListScreen(),
+              builder: (context) => LoginScreen(),
             )
         );
       }

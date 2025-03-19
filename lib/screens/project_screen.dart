@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sunu_projet/config/constants_colors.dart';
 import 'package:sunu_projet/config/size_config.dart';
-
-import 'add_project_screen.dart'; // Pour naviguer vers la création
+import 'package:sunu_projet/providers/project/project_service.dart';
+import 'package:sunu_projet/screens/add_project_screen.dart';
+import 'package:sunu_projet/screens/project_overview_screen.dart';
 
 class ProjectListScreen extends StatefulWidget {
   const ProjectListScreen({super.key});
@@ -32,22 +34,17 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
-  // Contenu à afficher en fonction de l'onglet sélectionné
-  final List<Widget> _pages = [
-    Center(child: Text('Page Accueil')),
-    Center(child: Text('Page Profil')),
-    Center(child: Text('Page Paramètres')),
-  ];
 
   @override
   Widget build(BuildContext context) {
+    final projectService = Provider.of<ProjectService>(context);
     SizeConfig.init(context);
-
 
     return Scaffold(
       appBar: AppBar(
@@ -57,18 +54,17 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
       body: Column(
         children: [
           Container(
-            color: Colors.blue, // Couleur de fond du menu
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildMenuButton('En attente', 0),
-                  _buildMenuButton('En cours', 1),
-                  _buildMenuButton('Terminés', 2),
-                  _buildMenuButton('Annulés', 3),
-                ],
-              ),
+            color: Colors.blue,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMenuButton('En attente', 0),
+                _buildMenuButton('En cours', 1),
+                _buildMenuButton('Terminés', 2),
+                _buildMenuButton('Annulés', 3),
+              ],
             ),
-          // Barre de recherche
+          ),
           Padding(
             padding: EdgeInsets.all(SizeConfig.getProportinateScreenWidth(16)),
             child: TextField(
@@ -87,13 +83,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
               ),
             ),
           ),
-          // Liste des projets
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('projects')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
+              stream: projectService.getProjects(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -113,9 +105,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                           "Aucun projet trouvé",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              fontSize: 18,
-                              color: kDarkColor,
-                              fontWeight: FontWeight.bold
+                            fontSize: 18,
+                            color: kDarkColor,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
@@ -128,14 +120,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   );
                 }
 
-
-                final projects = snapshot.data!.docs.where((doc) {
-                  final title = doc['title'].toString().toLowerCase();
-                  final description =
-                      doc['description']?.toString().toLowerCase() ?? '';
-                  return title.contains(_searchQuery) ||
-                      description.contains(_searchQuery);
-                }).toList();
+                final projects =
+                    snapshot.data!.docs.where((doc) {
+                      final title = doc['title'].toString().toLowerCase();
+                      final description =
+                          doc['description']?.toString().toLowerCase() ?? '';
+                      return title.contains(_searchQuery) ||
+                          description.contains(_searchQuery);
+                    }).toList();
 
                 return ListView.builder(
                   padding: EdgeInsets.symmetric(
@@ -144,15 +136,18 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   itemCount: projects.length,
                   itemBuilder: (context, index) {
                     final project = projects[index];
+                    final projectId = project.id;
                     final title = project['title'] as String;
                     final description = project['description'] as String? ?? '';
                     final priority = project['priority'] as String;
                     final status = project['status'] as String;
                     final startDate =
-                    (project['startDate'] as Timestamp?)?.toDate();
-                    final endDate = (project['endDate'] as Timestamp?)?.toDate();
+                        (project['start_date'] as Timestamp?)?.toDate();
+                    final endDate =
+                        (project['end_date'] as Timestamp?)?.toDate();
 
                     return ProjectCard(
+                      projectId: projectId,
                       title: title,
                       description: description,
                       priority: priority,
@@ -167,7 +162,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           ),
           Container(
             color: Colors.white,
-              child: Align(
+            child: Align(
               alignment: Alignment.bottomRight,
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -175,41 +170,38 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   backgroundColor: kPrimaryColor,
                   onPressed: () {
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddProjectScreenState()),
-                        );
-                      },
-                    child: Icon(
-                        Icons.add,
-                      color: kWhiteColor,
-                    ),
-                  ),
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddProjectScreenState(),
+                      ),
+                    );
+                  },
+                  child: Icon(Icons.add, color: kWhiteColor),
                 ),
               ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Méthode pour créer un bouton du menu
   Widget _buildMenuButton(String text, int index) {
     return TextButton(
       onPressed: () => _onItemTapped(index),
       child: Text(
         text,
         style: TextStyle(
-          color: _selectedIndex == index ? Colors.white : Colors.white70, // Couleur du texte
+          color: _selectedIndex == index ? Colors.white : Colors.white70,
           fontSize: 16,
         ),
       ),
     );
   }
-
 }
 
-// Widget pour afficher chaque projet
 class ProjectCard extends StatelessWidget {
+  final String projectId;
   final String title;
   final String description;
   final String priority;
@@ -219,6 +211,7 @@ class ProjectCard extends StatelessWidget {
 
   const ProjectCard({
     super.key,
+    required this.projectId,
     required this.title,
     required this.description,
     required this.priority,
@@ -266,9 +259,10 @@ class ProjectCard extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(SizeConfig.getProportinateScreenWidth(16)),
+        padding: EdgeInsets.all(SizeConfig.getProportinateScreenWidth(7)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -277,14 +271,17 @@ class ProjectCard extends StatelessWidget {
                   child: Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getPriorityColor().withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -299,34 +296,85 @@ class ProjectCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: SizeConfig.getProportinateScreenheight(8)),
+            SizedBox(height: SizeConfig.getProportinateScreenheight(4)),
+
             Text(
               description,
               style: const TextStyle(fontSize: 14, color: kGrayColor),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: SizeConfig.getProportinateScreenheight(8)),
+            SizedBox(height: SizeConfig.getProportinateScreenheight(4)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: LinearProgressIndicator(
+                value: 0, // Valeur de progression
+                backgroundColor: Colors.grey[300], // Couleur de fond de la barre
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue), // Couleur de la barre de progression
+                minHeight: 8, // Hauteur de la barre
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Échéance: ${endDate != null ? "${endDate!.day}/${endDate!.month}/${endDate!.year}" : "Non défini"}",
-                  style: const TextStyle(fontSize: 12),
+                  "$projectId% terminé",
+                  style: const TextStyle(fontSize: 10, color: kGrayColor),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor().withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                   child: Text(
-                    status,
-                    style: TextStyle(
-                      color: _getStatusColor(),
-                      fontWeight: FontWeight.bold,
-                    ),
+                    "Échéance: ${endDate != null ? "${endDate!.day}/${endDate!.month}/${endDate!.year}" : "Non défini"}",
+                    style: const TextStyle(fontSize: 10, color: kGrayColor),
+
                   ),
+                )
+
+                // Container(
+                //   padding: const EdgeInsets.symmetric(
+                //     horizontal: 8,
+                //     vertical: 4,
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: _getStatusColor().withOpacity(0.2),
+                //     borderRadius: BorderRadius.circular(8),
+                //   ),
+                //   child: Text(
+                //     status,
+                //     style: TextStyle(
+                //       color: _getStatusColor(),
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //   ),
+                // ),
+              ],
+            ),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CircleAvatar(
+                  radius: 14, // Taille du cercle
+                  backgroundImage: AssetImage('assets/profile.jpg'), // Image locale
+                  // OU pour une image réseau :
+                  // backgroundImage: NetworkImage('https://exemple.com/profile.jpg'),
+                  backgroundColor: Colors.grey[300], // Couleur de fond si aucune image
+                  child: Text('AB', style: TextStyle(fontSize: 15)), // Texte si aucune image
+                ),
+                Container(
+                    child: IconButton(
+                      onPressed: () {
+                        // Action à effectuer lors du clic
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProjectOverviewScreen(projectId: projectId),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.chevron_right), // Icône,
+                    )
                 ),
               ],
             ),

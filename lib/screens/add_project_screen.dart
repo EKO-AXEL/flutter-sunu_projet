@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sunu_projet/config/constants_colors.dart';
 import 'package:sunu_projet/config/size_config.dart';
+import 'package:sunu_projet/providers/project/project_service.dart';
+import 'package:sunu_projet/screens/project_screen.dart';
 import '../config/inputs_fields.dart'; // Assurez-vous que le chemin est correct
 
 class AddProjectScreenState extends StatefulWidget {
@@ -17,7 +20,6 @@ class _AddProjectScreenState extends State<AddProjectScreenState> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
-  final TextEditingController _priorityController = TextEditingController();
   // Liste des options priorite
   final List<String> _options = ["Basse", "Moyenne", "Haute", "Urgente"];
 
@@ -30,27 +32,24 @@ class _AddProjectScreenState extends State<AddProjectScreenState> {
     _descriptionController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();
-    _priorityController.dispose();
     super.dispose();
   }
 
-  void _submitProject() {
-    if (_formKey.currentState!.validate()) {
-      // Logique pour enregistrer le projet (ex. Firebase)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Projet créé avec succès !")),
-      );
-      // Réinitialiser le formulaire après soumission
-      _formKey.currentState!.reset();
-      _startDate = null;
-      _endDate = null;
+  DateTime parseCustomDate(String dateString) {
+    final parts = dateString.split('/');
+    if (parts.length == 3) {
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+      return DateTime(year, month, day);
     }
+    throw FormatException('Invalid date format: $dateString');
   }
 
   @override
   Widget build(BuildContext context) {
+    final firestoreProvider = Provider.of<ProjectService>(context);
     SizeConfig.init(context); // Initialisation de SizeConfig
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Créer un projet"),
@@ -195,7 +194,46 @@ class _AddProjectScreenState extends State<AddProjectScreenState> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _submitProject,
+                    onPressed: () async {
+                      if (_formKey.currentState!.validate()) {
+                        try {
+
+                          DateTime startDate = parseCustomDate(_startDateController.text);
+                          DateTime endDate = parseCustomDate(_endDateController.text);
+                          // Logique pour enregistrer le projet (ex. Firebase)
+                          await firestoreProvider.addProject({
+                            'title': _titleController.text,
+                            'description': _descriptionController.text,
+                            'start_date': startDate,
+                            'end_date': endDate,
+                            'priority': _selectedOption,
+                            'status': 'En attente',
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Projet créé avec succès !")),
+                          );
+
+                          // Réinitialiser le formulaire après soumission
+                          _formKey.currentState!.reset();
+                          _startDate = null;
+                          _endDate = null;
+
+                          // Naviguer après la sauvegarde
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProjectListScreen(),
+                            ),
+                          );
+                        } catch (e) {
+                          // Afficher une erreur si la sauvegarde échoue
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Erreur lors de la création du projet : $e")),
+                          );
+                        }
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimaryColor,
                       padding: EdgeInsets.symmetric(

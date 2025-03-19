@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sunu_projet/config/theme.dart';
 import 'package:sunu_projet/providers/authentification_service.dart';
+import 'package:sunu_projet/providers/project/project_service.dart';
 import 'package:sunu_projet/screens/splash_screen.dart';
 
 void main() async{
@@ -14,7 +15,8 @@ void main() async{
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AuthenticationService()),
-          StreamProvider<User?>.value(value: AuthenticationService().authStateChanges, initialData: null,)
+          StreamProvider<User?>.value(value: AuthenticationService().authStateChanges, initialData: null,),
+          ChangeNotifierProvider(create: (_) => ProjectService()),
         ],
         child: MyApp(),
       )

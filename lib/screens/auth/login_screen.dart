@@ -38,40 +38,51 @@ class _LoginScreen extends State<LoginScreen> {
 
         String? uid = authService.uid;
 
-        // if (uid != null) {
-        //   MyUserModel? userData = await userService.getUserById(uid);
-        //
-        //   print("Uid ID : ${userData}");
-        //   if (userData != null) {
+        if (uid != null) {
+          MyUserModel? userData = await userService.getUserById(uid);
+
+          print("Uid ID : ${userData}");
+          if (userData != null) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => ProjectListScreen(),
               ),
             );
-          // } else {
-          //   setState(() {
-          //     errorMessage = "Aucun utilisateur trouvé avec cet UID";
-          //     isLoading = false;
-          //   });
-          // }
-        // } else {
-        //   setState(() {
-        //     errorMessage = "UID de l'utilisateur non disponible";
-        //     isLoading = false;
-        //   });
-        // }
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text(
-            "Vous etes connecté !",
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          duration: Duration(seconds: 5),
-          backgroundColor: kGreenColor,
-        ));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: const Text(
+                "Vous etes connecté !",
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              duration: Duration(seconds: 5),
+              backgroundColor: kGreenColor,
+            ));
+          } else {
+            setState(() {
+              errorMessage = "Aucun utilisateur trouvé avec cet UID";
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(
+                  "Aucun utilisateur trouvé avec cet UID : $uid",
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                duration: Duration(seconds: 5),
+                backgroundColor: kGreenColor,
+              ));
+              isLoading = false;
+            });
+          }
+        } else {
+          setState(() {
+            errorMessage = "UID de l'utilisateur non disponible";
+            isLoading = false;
+          });
+        }
       } on FirebaseAuthException catch (ex) {
         setState(() {
           isLoading = false;

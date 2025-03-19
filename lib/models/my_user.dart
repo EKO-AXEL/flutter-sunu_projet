@@ -1,41 +1,37 @@
 class MyUserModel {
-  String? _uid;
   String? _email;
-  String? _password;
-  String? _nom;
-  String? _prenom;
+  String? _lastname;
+  String? _firstname;
 
-  String? get uid => _uid;
   String? get email => _email;
-  String? get password => _password;
-  String? get nom => _nom;
-  String? get prenom => _prenom;
+  String? get lastname => _lastname;
+  String? get firstname => _firstname;
 
-  set setPrenom(String prenom) {
-    _prenom = prenom;
+  set setFirstname(String firstname) {
+    _firstname = firstname;
   }
 
-  set setNom(String nom) {
-    _nom = nom;
+  set setLastname(String lastname) {
+    _lastname = lastname;
   }
 
   set setEmail(String email) {
     _email = email;
   }
 
-  MyUserModel(this._uid, this._nom, this._prenom);
+  MyUserModel(this._email, this._lastname, this._firstname);
 
-  MyUserModel.fromMap(Map<String, dynamic> data, String documentId)
-      : _uid = documentId,
-        _nom = data['nom'],
-        _prenom = data['prenom'];
+  MyUserModel.fromMap(Map<String, dynamic> data)
+      : _email = data['email'],
+        _lastname = data['lastname'],
+        _firstname = data['firstname'];
 
   // Convertir un MyUserModel en Map pour Firestore
   Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'nom': nom,
-      'prenom': prenom,
+      'email': email,
+      'lastname': lastname,
+      'firstname': firstname,
     };
   }
 }
